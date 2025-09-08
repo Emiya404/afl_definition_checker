@@ -42,16 +42,25 @@ RUN git clone https://github.com/hfiref0x/LightFTP.git lightftp && \
 
 # 6. copy fuzzers and tools
 RUN mkdir /home/ubuntu/experiments/tools/
-COPY --chown=ubuntu:ubuntu tools /home/ubuntu/experiments/tools/
+COPY --chown=ubuntu:ubuntu stateful_arena/tools /home/ubuntu/experiments/tools/
 RUN mkdir /home/ubuntu/experiments/fuzzers
 WORKDIR /home/ubuntu/experiments/fuzzers
-RUN git clone https://github.com/aflnet/aflnet.git && \
-  git clone https://github.com/stateafl/stateafl.git && \
-  git clone https://github.com/DonggeLiu/AFLNet_Legion.git
+RUN git clone https://github.com/aflnet/aflnet.git aflnet && \
+  git clone https://github.com/stateafl/stateafl.git stateafl && \
+  git clone https://github.com/DonggeLiu/AFLNet_Legion.git aflnetlegion
 RUN mkdir /home/ubuntu/experiments/fuzzers/nsfuzz
-COPY nsfuzz /home/ubuntu/experiments/fuzzers/nsfuzz
+COPY stateful_arena/nsfuzz /home/ubuntu/experiments/fuzzers/nsfuzz
 
-# 7. run the container
+# 7. create fuzz arena
+RUN mkdir /home/ubuntu/experiments/fuzz_arena
+ENV FUZZ_ARENA=/home/ubuntu/experiments/fuzz_arena
+
+# 8. create stateful pass stuff
+RUN mkdir /home/ubuntu/experiments/stateful_pass/
+COPY --chown=ubuntu:ubuntu compile_scripts /home/ubuntu/experiments/stateful_pass/compile_scripts
+COPY --chown=ubuntu:ubuntu src /home/ubuntu/experiments/stateful_pass/src
+
+# run the container
 CMD ["/home/ubuntu/start.sh"]
 
 
