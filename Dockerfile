@@ -49,7 +49,7 @@ RUN git clone https://github.com/aflnet/aflnet.git aflnet && \
   git clone https://github.com/stateafl/stateafl.git stateafl && \
   git clone https://github.com/DonggeLiu/AFLNet_Legion.git aflnetlegion
 RUN mkdir /home/ubuntu/experiments/fuzzers/nsfuzz
-COPY stateful_arena/nsfuzz /home/ubuntu/experiments/fuzzers/nsfuzz
+COPY --chown=ubuntu:ubuntu stateful_arena/nsfuzz /home/ubuntu/experiments/fuzzers/nsfuzz
 
 # 7. create fuzz arena
 RUN mkdir /home/ubuntu/experiments/fuzz_arena

@@ -28,12 +28,12 @@ else
   elif [ $1 = "nsfuzz" ]; then
     echo "[*]set up nsfuzz ENV"
     export LLVM_DIR=$HOME/experiments/llvm-project/build/
-    export AFL_CC=$HOME/experiments/llvm-project/build/bin/clang
-    export AFL_CXX=$HOME/experiments/llvm-project/build/bin/clang++
-    export CLANG=$HOME/experiments/llvm-project/build/bin/clang
-    export CLANGXX=$HOME/experiments/llvm-project/build/bin/clang++
-    export LLVM_CONFIG=$HOME/experiments/llvm-project/build/bin/llvm-config-10
-    export STATIC=$HOME/experiments/fuzzers/nsfuzz/SVAnaluzer
+    export AFL_CC=clang
+    export AFL_CXX=clang++
+    export CLANG=clang
+    export CLANGXX=clang++
+    export LLVM_CONFIG=llvm-config-10
+    export STATIC=$HOME/experiments/fuzzers/nsfuzz/PreAnalysis/SVAnalyzer
     export NSFUZZ=$HOME/experiments/fuzzers/nsfuzz/
 
     export AFL_SKIP_CPUFREQ=1

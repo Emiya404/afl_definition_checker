@@ -28,7 +28,7 @@ unset CFLAGS
 rm $DEFINITION_CHECKER_LIST/func_count.txt
 rm $DEFINITION_CHECKER_LIST/func_list.txt
 cd $1
-git checkout 5980ea1
+git reset --hard 5980ea1
 patch -p1 <$2/../compile_scripts/lightftp/fuzzing.patch
 cd Source/Release
 CC=afl-clang-fast make -j1 clean all

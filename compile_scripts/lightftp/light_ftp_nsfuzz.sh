@@ -23,25 +23,25 @@ make
 unset CFLAGS
 
 # 4.static analyse SUT
-cd $1
-cd Source/Release
-make clean
-CC="clang-emit-bc-new.sh" make
-find . -name "*.llbc" >bitcode.list
-python3 $NSFUZZ/PreAnalysis/SVAnalyzer/get_backtrace.py --sut_path ./fftp --sut_option "$2/compile_scripts/lightftp/fftp.conf 2200" --port 2200
-SVAnalyzer @bitcode.list -i input.btrace -o static_out -s sync_point --dump-call-map >output_test 2>&1
+#cd $1
+#cd Source/Release
+#make clean
+#CC="clang-emit-bc-new.sh" make
+#find . -name "*.llbc" >bitcode.list
+#python3 $NSFUZZ/PreAnalysis/SVAnalyzer/get_backtrace.py --sut_path ./fftp --sut_option "$2/../compile_scripts/lightftp/fftp.conf 2200" --port 2200
+#SVAnalyzer @bitcode.list -i input.btrace -o static_out -s sync_point --dump-call-map >output_test 2>&1
 
 # 5.compile SUT
 rm ${DEFINITION_CHECKER_LIST}/func_count.txt
 rm ${DEFINITION_CHECKER_LIST}/func_list.txt
 cd $1
-git checkout 5980ea1
+git reset --hard 5980ea1
 patch -p1 <$2/../compile_scripts/lightftp/fuzzing.patch
 cd Source/Release
 make clean
 export NSFUZZ_TRACE_STATE=1
-export ANALYZER_SVFILE_PATH="$PWD/static_out"
-export ANALYZER_SYNCFILE_PATH="$PWD/sync_point"
+export ANALYZER_SVFILE_PATH=$2/../compile_scripts/lightftp/static_out
+export ANALYZER_SYNCFILE_PATH=$2/../compile_scripts/lightftp/sync_point
 CC=afl-clang-fast make
 
 # 5.copy seeds, clean scripts, SUT arg files to $FUZZ_ARENA
@@ -49,5 +49,5 @@ mkdir ${FUZZ_ARENA}/lightftp
 cp -r $2/../compile_scripts/lightftp/in-ftp-replay/ ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/clean.sh ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/fftp.conf ${FUZZ_ARENA}/lightftp
-cp ./fftp ${FUZZ_ARENA}
+cp ./fftp ${FUZZ_ARENA}/lightftp
 mkdir ${FUZZ_ARENA}/lightftp/ftpshare
