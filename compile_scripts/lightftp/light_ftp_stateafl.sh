@@ -25,8 +25,7 @@ make
 unset CFLAGS
 
 # 4.compile SUT
-rm $DEFINITION_CHECKER_LIST/func_count.txt
-rm $DEFINITION_CHECKER_LIST/func_list.txt
+rm $DEFINITION_CHECKER_LIST/bb_count.txt
 cd $1
 git reset --hard 5980ea1
 patch -p1 <$2/../compile_scripts/lightftp/fuzzing.patch

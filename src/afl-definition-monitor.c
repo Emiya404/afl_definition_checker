@@ -180,18 +180,16 @@ int do_sut_state_machine(int epoll_fd, int sut_sock_fd, unsigned int evs) {
   int hash_value;
   int state_code;
 
-
-  if(evs & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)){
+  if (evs & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
     r = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sut_sock_fd, NULL);
-    printf("there 1 %d\n", r);
-    if(r < 0){
-      perror("[!]delete fucking shit\n");
+    if (r < 0) {
+      perror("delete client sock failed\n");
     }
     r = close(sut_sock_fd);
-    if(r < 0){
-      perror("[!]delete fucking shit 2\n");
+    if (r < 0) {
+      perror("close client sock failed\n");
     }
-    
+
     save_len = (bucket_index + 1) * (bucket_size + 4);
     if (save_len < 0) {
       // printf("[!]error bucket size\n");
@@ -226,13 +224,13 @@ int do_sut_state_machine(int epoll_fd, int sut_sock_fd, unsigned int evs) {
      * Write this for stability.
      */
     printf("[$]read result %d\n", r);
-    if (errno == EAGAIN || errno == EWOULDBLOCK){
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
       printf("there 2\n");
       return 0;
     }
-    //printf("fuck1\n");
-    //epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sut_sock_fd, NULL);
-    //close(sut_sock_fd);
+    // printf("fuck1\n");
+    // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sut_sock_fd, NULL);
+    // close(sut_sock_fd);
     bucket_index = 0;
 
     return -1;
@@ -259,15 +257,15 @@ int do_sut_state_machine(int epoll_fd, int sut_sock_fd, unsigned int evs) {
       }
     }
     bucket_size = *(int *)(&buf[9]);
-    //printf("[*] recvd init msg: shm_id %d, bucket_size %d\n", extra_shm_id,
-    //bucket_size);
+    printf("[*] recvd init msg: shm_id %d, bucket_size %d\n", extra_shm_id,
+           bucket_size);
   } else if (!strcmp(buf, "sync")) {
 
     bucket_index = *(int *)(&buf[5]);
     state_code = *(int *)(&buf[9]);
     *(int *)(shm_ptr + (bucket_size + 4) * bucket_index) = state_code;
-    //printf("[*] recvd sync msg: bucket_index %d, state_code %d\n",
-    //bucket_index, state_code);
+    // printf("[*] recvd sync msg: bucket_index %d, state_code %d\n",
+    // bucket_index, state_code);
     write(sut_sock_fd, "ok\0", 0x3);
 
   } else {
@@ -339,11 +337,11 @@ int main() {
         }
       } else {
         int r = do_sut_state_machine(epoll_fd, events[i].data.fd, evs);
-      	if (r < 0) {
-		printf("client end \n");
-		//epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-		//close(events[i].data.fd);
-	}
+        if (r < 0) {
+          printf("client end \n");
+          // epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+          // close(events[i].data.fd);
+        }
       }
     }
   }

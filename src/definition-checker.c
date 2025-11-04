@@ -628,7 +628,7 @@ int connect_monitor() {
   func_count_env = getenv("DEFINITION_CHECKER_LIST");
   if (func_count_env) {
     memset(buf, 0x0, sizeof(buf));
-    sprintf(buf, "%s/func_count.txt", func_count_env);
+    sprintf(buf, "%s/bb_count.txt", func_count_env);
     func_count_fd = open(buf, O_RDONLY);
     if (func_count_fd <= 0) {
       perror("[!]open func count failed");
@@ -703,7 +703,6 @@ int connect_monitor() {
       perror("[!]shmat failed");
       exit(1);
     }
-    printf("here!!!!!!!!!\n");
   }
 
   return 0;
