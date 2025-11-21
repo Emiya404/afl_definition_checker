@@ -32,6 +32,9 @@ WORKDIR /home/ubuntu/experiments
 RUN mkdir /home/ubuntu/experiments/targets 
 WORKDIR /home/ubuntu/experiments/targets 
 
+RUN git config --global http.https://github.com.proxy http://192.168.111.1:7890 && \
+git config --global https.https://github.com.proxy https://192.168.111.1:7890
+
 RUN git clone https://github.com/hfiref0x/LightFTP.git lightftp && \
   git clone https://github.com/assist-project/tinydtls-fuzz.git tinydtls && \
   git clone https://github.com/rgaufman/live555.git live555 && \

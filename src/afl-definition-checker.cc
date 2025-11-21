@@ -227,15 +227,15 @@ bool afl_definition_checker::runOnModule(Module &M) {
             if (TI && isXor) {
               Instruction *NI = TI->getNextNode();
               if (NI) {
-                if (auto *GEPI = dyn_cast<GetElementPtrInst>(NI)) {
-                  IRBuilder<> IRB(GEPI);
+                
+                  IRBuilder<> IRB(NI);
                   std::vector<Value *> store_sutinfo_args;
                   ConstantInt *bb_count_arg =
                       ConstantInt::get(i32_type, bb_count);
                   store_sutinfo_args.push_back(bb_count_arg);
                   bb_count++;
                   IRB.CreateCall(store_sutinfo, store_sutinfo_args);
-                }
+                
               }
             }
           }
@@ -272,7 +272,7 @@ bool afl_definition_checker::runOnModule(Module &M) {
           if (auto *function_candidate = dyn_cast<Function>(CalledV)) {
 
             StringRef callee_name =
-                call_instruction->getCalledFunction()->getName();
+                function_candidate->getName();
 
 #if (defined LIGHTFTP_SEND_INSTRUMENT) || (defined LIVE555_SEND_INSTRUMENT)
             if (callee_name == "send") {
@@ -281,8 +281,12 @@ bool afl_definition_checker::runOnModule(Module &M) {
               std::vector<Value *> update_sutstate_packet_args;
               update_sutstate_packet_args.push_back(send_buf);
               update_sutstate_packet_args.push_back(send_size);
-              ConstantInt *ftp_code = ConstantInt::get(i32_type, FTP);
-              update_sutstate_packet_args.push_back(ftp_code);
+            #ifdef LIGHTFTP_SEND_INSTRUMENT
+              ConstantInt *code = ConstantInt::get(i32_type, FTP);
+            #else
+              ConstantInt *code = ConstantInt::get(i32_type, RTSP);
+            #endif
+              update_sutstate_packet_args.push_back(code);
               IRBuilder<> ir_builder(call_instruction);
               ir_builder.CreateCall(update_sutstate_packet,
                                     update_sutstate_packet_args, "result");
