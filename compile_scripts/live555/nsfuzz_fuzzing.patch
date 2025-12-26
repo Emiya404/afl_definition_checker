@@ -1,0 +1,92 @@
+diff --git a/BasicUsageEnvironment/BasicTaskScheduler0.cpp b/BasicUsageEnvironment/BasicTaskScheduler0.cpp
+index 36c8349..abc148c 100644
+--- a/BasicUsageEnvironment/BasicTaskScheduler0.cpp
++++ b/BasicUsageEnvironment/BasicTaskScheduler0.cpp
+@@ -19,6 +19,7 @@ along with this library; if not, write to the Free Software Foundation, Inc.,
+ 
+ #include "BasicUsageEnvironment0.hh"
+ #include "HandlerSet.hh"
++#include <signal.h>
+ 
+ ////////// A subclass of DelayQueueEntry,
+ //////////     used to implement BasicTaskScheduler0::scheduleDelayedTask()
+@@ -76,6 +77,7 @@ void BasicTaskScheduler0::unscheduleDelayedTask(TaskToken& prevTask) {
+ void BasicTaskScheduler0::doEventLoop(char volatile* watchVariable) {
+   // Repeatedly loop, handling readble sockets and timed events:
+   while (1) {
++    _NSFUZZ_SYNC();
+     if (watchVariable != NULL && *watchVariable != 0) break;
+     SingleStep();
+   }
+diff --git a/config.linux b/config.linux
+index 67cad1e..64b0d3d 100644
+--- a/config.linux
++++ b/config.linux
+@@ -1,12 +1,12 @@
+ COMPILE_OPTS =		$(INCLUDES) -I. -O2 -DSOCKLEN_T=socklen_t -D_LARGEFILE_SOURCE=1 -D_FILE_OFFSET_BITS=64 -DALLOW_RTSP_SERVER_PORT_REUSE=1
+ C =			c
+-C_COMPILER =		cc
++C_COMPILER =		/home/ubuntu/experiments/fuzzers/nsfuzz/afl-clang-fast
+ C_FLAGS =		$(COMPILE_OPTS) $(CPPFLAGS) $(CFLAGS)
+ CPP =			cpp
+-CPLUSPLUS_COMPILER =	c++
++CPLUSPLUS_COMPILER =	/home/ubuntu/experiments/fuzzers/nsfuzz/afl-clang-fast++
+ CPLUSPLUS_FLAGS =	$(COMPILE_OPTS) -Wall -DBSD=1 $(CPPFLAGS) $(CXXFLAGS)
+ OBJ =			o
+-LINK =			c++ -o
++LINK =			/home/ubuntu/experiments/fuzzers/nsfuzz/afl-clang-fast++ -o
+ LINK_OPTS =		-L. $(LDFLAGS)
+ CONSOLE_LINK_OPTS =	$(LINK_OPTS)
+ LIBRARY_LINK =		ar cr 
+diff --git a/liveMedia/GenericMediaServer.cpp b/liveMedia/GenericMediaServer.cpp
+index 4690516..b1d2bf3 100644
+--- a/liveMedia/GenericMediaServer.cpp
++++ b/liveMedia/GenericMediaServer.cpp
+@@ -319,7 +319,7 @@ GenericMediaServer::ClientSession* GenericMediaServer::createNewClientSessionWit
+   // (it will be encoded as a 8-digit hex number).  (We avoid choosing session id 0,
+   // because that has a special use by some servers.)
+   do {
+-    sessionId = (u_int32_t)our_random32();
++    sessionId = (u_int32_t)8888;
+     snprintf(sessionIdStr, sizeof sessionIdStr, "%08X", sessionId);
+   } while (sessionId == 0 || lookupClientSession(sessionIdStr) != NULL);
+ 
+diff --git a/liveMedia/include/RTSPServer.hh b/liveMedia/include/RTSPServer.hh
+index e53159e..f84c0f8 100644
+--- a/liveMedia/include/RTSPServer.hh
++++ b/liveMedia/include/RTSPServer.hh
+@@ -207,7 +207,7 @@ public: // should be protected, but some old compilers complain otherwise
+     RTSPServer& fOurRTSPServer; // same as ::fOurServer
+     int& fClientInputSocket; // aliased to ::fOurSocket
+     int fClientOutputSocket;
+-    Boolean fIsActive;
++    Boolean _NSFUZZ_STATE(fIsActive);
+     unsigned char* fLastCRLF;
+     unsigned fRecursionCount;
+     char const* fCurrentCSeq;
+@@ -254,10 +254,10 @@ public: // should be protected, but some old compilers complain otherwise
+ 
+   protected:
+     RTSPServer& fOurRTSPServer; // same as ::fOurServer
+-    Boolean fIsMulticast, fStreamAfterSETUP;
++    Boolean fIsMulticast, _NSFUZZ_STATE(fStreamAfterSETUP);
+     unsigned char fTCPStreamIdCount; // used for (optional) RTP/TCP
+     Boolean usesTCPTransport() const { return fTCPStreamIdCount > 0; }
+-    unsigned fNumStreamStates;
++    unsigned _NSFUZZ_STATE(fNumStreamStates);
+     struct streamState {
+       ServerMediaSubsession* subsession;
+       int tcpSocketNum;
+diff --git a/testProgs/testOnDemandRTSPServer.cpp b/testProgs/testOnDemandRTSPServer.cpp
+index 6bf44c1..f59c861 100644
+--- a/testProgs/testOnDemandRTSPServer.cpp
++++ b/testProgs/testOnDemandRTSPServer.cpp
+@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
+ #endif
+ 
+   // Create the RTSP server:
+-  RTSPServer* rtspServer = RTSPServer::createNew(*env, 8554, authDB);
++  RTSPServer* rtspServer = RTSPServer::createNew(*env, atoi(argv[1]), authDB);
+   if (rtspServer == NULL) {
+     *env << "Failed to create RTSP server: " << env->getResultMsg() << "\n";
+     exit(1);

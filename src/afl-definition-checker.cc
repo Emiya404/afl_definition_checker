@@ -157,7 +157,7 @@ bool afl_definition_checker::runOnModule(Module &M) {
    */
   FunctionType *store_sutinfo_t = FunctionType::get(i64_type, i32_type, false);
   FunctionType *update_sutstate_packet_t =
-      FunctionType::get(i64_type, {p8_type, i32_type}, false);
+      FunctionType::get(i64_type, {p8_type, i32_type, i32_type, i32_type}, false);
   FunctionType *update_sutstate_dump_t =
       FunctionType::get(i64_type, {i32_type}, false);
   FunctionType *connect_monitor_t =
@@ -287,46 +287,50 @@ bool afl_definition_checker::runOnModule(Module &M) {
               ConstantInt *code = ConstantInt::get(i32_type, RTSP);
             #endif
               update_sutstate_packet_args.push_back(code);
+              ConstantInt *notcheck = ConstantInt::get(i32_type, 0x0);
+              update_sutstate_packet_args.push_back(notcheck);
               IRBuilder<> ir_builder(call_instruction);
               ir_builder.CreateCall(update_sutstate_packet,
                                     update_sutstate_packet_args, "result");
             }
 #endif
 
-#ifdef TINYFTPD_SEND_INSTRUMENT
+#ifdef TINYDTLS_SEND_INSTRUMENT
             if (callee_name == "sendto") {
               auto *send_buf = call_instruction->getArgOperand(1);
-              auto *s std::vector<Value *> update_sutstate_packet_args;
+              auto *send_size = call_instruction->getArgOperand(2);
+              ConstantInt *code = ConstantInt::get(i32_type, DTLS);
+              std::vector<Value *> update_sutstate_packet_args;
               update_sutstate_packet_args.push_back(send_buf);
               update_sutstate_packet_args.push_back(send_size);
+              update_sutstate_packet_args.push_back(code);
+              ConstantInt *notcheck = ConstantInt::get(i32_type, 0x0);
+              update_sutstate_packet_args.push_back(notcheck);
               IRBuilder<> ir_builder(call_instruction);
               ir_builder.CreateCall(update_sutstate_packet,
                                     update_sutstate_packet_args, "result");
             }
 #endif
+
 #ifdef OPENSSL_SEND_INSTRUMENT
 
-            auto *send_buf = call_instruction->getArgOperand(1);
-            auto *send_size = call_instruction->getArgOperand(2);
-            std::vector<Value *> update_sutstate_packet_args;
-            update_sutstate_packet_args.push_back(send_buf);
-            update_sutstate_packet_args.push_back(send_size);
-            IRBuilder ir_builder.CreateCall(
-                update_sutstate_packet, update_sutstate_packet_args, "result");
-          }
 #endif
 
 #ifdef OPENSSH_SEND_INSTRUMENT
-          if (callee_name == "ssh_packet_write_poll") {
-            auto *ssh_struct = call_instruction->getArgOperand(0);
-            auto *ssh_type = 0xf0000000;
-            std::vector<Value *> update_sutstate_packet_args;
-            update_sutstate_packet_args.push_back(ssh_struct);
-            update_sutstate_packet_args.push_back(ssh_type);
-            IRBuilder<> ir_builder(call_instruction);
-            ir_builder.CreateCall(update_sutstate_packet,
-                                  update_sutstate_packet_args, "result");
-          }
+          if (callee_name == "write") {
+              auto *send_buf = call_instruction->getArgOperand(1);
+              auto *send_size = call_instruction->getArgOperand(2);
+              ConstantInt *code = ConstantInt::get(i32_type, SSH);
+              std::vector<Value *> update_sutstate_packet_args;
+              update_sutstate_packet_args.push_back(send_buf);
+              update_sutstate_packet_args.push_back(send_size);
+              update_sutstate_packet_args.push_back(code);
+              auto *checkfd = call_instruction->getArgOperand(0);
+              update_sutstate_packet_args.push_back(checkfd);
+              IRBuilder<> ir_builder(call_instruction);
+              ir_builder.CreateCall(update_sutstate_packet,
+                                    update_sutstate_packet_args, "result");
+            }
 #endif
         }
       }

@@ -1,0 +1,176 @@
+--- a/afl-fuzz.c     2025-12-17 15:30:27.558023210 +0800
++++ b/afl-fuzz.c     2025-12-23 15:29:19.709133676 +0800
+@@ -842,6 +842,7 @@
+   return result;
+ }
+ 
++EXP_ST int score_log_fd = 0x0;
+ /* Select a seed to exercise the target state */
+ // 基于mode选择一个可以到达target state的seed
+ // TODO: 阅读FAVOR选种策略逻辑
+@@ -918,7 +919,12 @@
+   } else {
+     PFATAL("AFLNet - the states hashtable has no entries for state %d", target_state_id);
+   }
+-
++  u8 choose_buf[0x100];
++  memset(choose_buf, 0x0, 0x100);
++  sprintf(choose_buf, "state %u, choose %s\n", target_state_hash_id, result->fname);
++  if(score_log_fd > 0){
++    write(score_log_fd, choose_buf, strlen(choose_buf));
++  }
+   return result;
+ }
+ 
+@@ -5321,6 +5327,9 @@
+   if (delete_files(fn, "")) goto dir_cleanup_failed;
+   ck_free(fn);
+ 
++  fn = alloc_printf("%s/state_seeds", out_dir);
++  if (delete_files(fn, "")) goto dir_cleanup_failed;
++  ck_free(fn);
+   /* And now, for some finishing touches. */
+ 
+   fn = alloc_printf("%s/.cur_input", out_dir);
+@@ -5369,6 +5378,29 @@
+ /* A spiffy retro stats screen! This is called every stats_update_freq
+    execve() calls, plus in several other circumstances. */
+ 
++
++
++EXP_ST int score_log_time = 0x0;
++#define SCORE_LOG_FREQ 0x8
++
++static void setup_score_log(void){
++  u8 name_buf[0x100];
++  memset(name_buf, 0x0, 0x100);
++  sprintf(name_buf, "%s/score_log.txt", out_dir);
++  score_log_fd = open(name_buf, O_CREAT | O_RDWR, 0666);
++  if(score_log_fd < 0){
++    PFATAL("score log file create fail");
++  }
++  return;
++}
++
++static void destroy_score_log(void){
++  if(score_log_fd > 0){
++    close(score_log_fd);
++  }
++  return;
++}
++
+ static void show_stats(void) {
+ 
+   static u64 last_stats_ms, last_plot_ms, last_ms, last_execs;
+@@ -5847,9 +5879,19 @@
+       if (k != kh_end(FSM->khms_states)) {
+         state = kh_val(FSM->khms_states, k);
+         SAYF(cRST "%u:\t      %-18s"cCYA "%-9s"cLRD "%-20s"cGRA "%s\n",  state_id, DI(state->selected_times), DI(state->fuzzs), DI(state->paths_discovered), DI(state->paths));
+-        // if ((i + 1) % 3 == 0) SAYF("\n");
++        if(!((score_log_time) % (SCORE_LOG_FREQ))){
++          u32 score = ceil(1000 * pow(2, -log10(log10(state->fuzzs + 1) * state->selected_times + 1)) * pow(2, log(state->paths_discovered + 1)));
++          u8 score_buf[0x100];
++          memset(score_buf, 0x0, 0x100);
++          sprintf(score_buf, "%u|%u|%u|%u|%u\n", state_id, state->selected_times, state->fuzzs, state->paths_discovered, score);
++          if(score_log_fd > 0){
++            write(score_log_fd, socre_buf, strlen(score_buf));
++          }
++          // if ((i + 1) % 3 == 0) SAYF("\n");
++        }
+       }
+     }
++    score_log_time++;
+   }
+ 
+   /* Hallelujah! */
+@@ -8800,6 +8842,9 @@
+   if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
+   ck_free(tmp);
+ 
++  tmp = alloc_printf("%s/state_seeds", out_dir);
++  if (mkdir(tmp, 0700)) PFATAL("Unable to create '%s'", tmp);
++  ck_free(tmp);
+   /* All recorded paths in structure files. */
+ 
+   tmp = alloc_printf("%s/replayable-queue", out_dir);
+@@ -9723,6 +9768,8 @@
+ 
+   check_binary(argv[optind]);
+ 
++  setup_score_log();
++
+   start_time = get_cur_time();
+ 
+   if (qemu_mode)
+@@ -9895,6 +9942,62 @@
+ 
+ stop_fuzzing:
+ 
++  for(int i = 0; i < FSM->state_num; i++){
++    state_info_t *state_info;
++    u32 state_id = FSM->state_ids[i];
++    khint_t k = kh_get(hms, FSM->khms_states, state_id);
++    if(k != kh_end(FSM->khms_states)){
++      state_info = kh_val(FSM->khms_states, k);
++      printf("[*]dealing with state %d\n", state_id);
++      for(int seed_idx = 0; seed_idx < state_info->seeds_count; seed_idx++){
++        struct queue_entry *seed = state_info->seeds[seed_idx];
++        printf("[*]dealing with state %d, seed %d:%s\n", state_id, seed_idx, seed->fname);
++
++        u32 total_region = seed->region_count;
++        u32 M2_start_region_ID = 0;
++        u32 region_fail = 0x0;
++
++        if (state_aware_mode) {
++          /* In state aware mode, select M2 based on the targeted state ID */
++          u32 total_region = seed->region_count;
++          if (total_region == 0) PFATAL("0 region found for %s", seed->fname);
++
++          if (state_id == init_state_hash_id) {
++            M2_start_region_ID = 0;
++            //do not calculate region count
++          } else {
++            M2_start_region_ID = 0;
++
++            //Identify M2_start_region_ID first based on the target_state_id
++            for(int j = 0; j < seed->region_count; j++) {
++              u32 regionalStateCount = seed->regions[j].state_count;
++              if (regionalStateCount > 0) {
++                //reachableStateID is the last ID in the state_sequence
++                u32 reachableStateID = seed->regions[j].state_sequence[regionalStateCount - 1];
++                M2_start_region_ID++;
++                if (reachableStateID == state_id) break;
++              } else {
++                region_fail = 0x1;
++              }
++            }
++            //Handle corner case(s) and skip the current queue entry
++            if (M2_start_region_ID >= queue_cur->region_count) region_fail = 0x1;
++            if(region_fail){
++              printf("[!]seed %d of state %d failed\n", seed_idx, state_id);
++              region_fail = 0x0;
++              continue;
++            }
++          }
++          kl_messages = construct_kl_messages(seed->fname, seed->regions, M2_start_region_ID);
++          u8 *save_name = alloc_printf("%s/state_seeds/state_%d_origin_%d", out_dir, state_id, seed_idx);
++          save_kl_messages_to_file(kl_messages, save_name, 1, seed->region_count);
++        }
++      }
++    }
++    else{
++      printf("[!]invalid state %d\n", state_id);
++    }
++  }
+   SAYF(CURSOR_SHOW cLRD "\n\n+++ Testing aborted %s +++\n" cRST,
+        stop_soon == 2 ? "programmatically" : "by user");
+ 
+@@ -9917,7 +10020,7 @@
+   destroy_pipe_timer();
+   destroy_ipsm_fsm();
+   destroy_state_index();
+-
++  destroy_score_log();
+   alloc_report();
+ 
+   OKF("We're done here. Have a nice day!\n");

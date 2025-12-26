@@ -1,0 +1,25 @@
+diff --color -uNr live555/liveMedia/include/RTSPServer.hh live555-nsfuzz/liveMedia/include/RTSPServer.hh
+--- live555/liveMedia/include/RTSPServer.hh	2022-03-20 22:39:39.112352320 +0800
++++ live555-nsfuzz/liveMedia/include/RTSPServer.hh	2022-03-20 22:54:26.945693340 +0800
+@@ -207,7 +207,7 @@
+     RTSPServer& fOurRTSPServer; // same as ::fOurServer
+     int& fClientInputSocket; // aliased to ::fOurSocket
+     int fClientOutputSocket;
+-    Boolean fIsActive;
++    Boolean _STATE_VARIABLE(fIsActive);
+     unsigned char* fLastCRLF;
+     unsigned fRecursionCount;
+     char const* fCurrentCSeq;
+@@ -254,10 +254,10 @@
+ 
+   protected:
+     RTSPServer& fOurRTSPServer; // same as ::fOurServer
+-    Boolean fIsMulticast, fStreamAfterSETUP;
++    Boolean fIsMulticast, _STATE_VARIABLE(fStreamAfterSETUP);
+     unsigned char fTCPStreamIdCount; // used for (optional) RTP/TCP
+     Boolean usesTCPTransport() const { return fTCPStreamIdCount > 0; }
+-    unsigned fNumStreamStates;
++    unsigned _STATE_VARIABLE(fNumStreamStates);
+     struct streamState {
+       ServerMediaSubsession* subsession;
+       int tcpSocketNum;

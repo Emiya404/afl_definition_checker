@@ -254,6 +254,7 @@ static void edit_params(u32 argc, char **argv) {
     cc_params[cc_par_cnt++] = "-g";
     cc_params[cc_par_cnt++] = "-O3";
     cc_params[cc_par_cnt++] = "-funroll-loops";
+    cc_params[cc_par_cnt++] = "-fno-omit-frame-pointer"
   }
 
   if (getenv("AFL_NO_BUILTIN")) {

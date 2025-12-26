@@ -1,0 +1,3 @@
+class.RTSPServer::RTSPClientConnection,0,5
+class.RTSPServer::RTSPClientSession,0,3
+class.RTSPServer::RTSPClientSession,0,5

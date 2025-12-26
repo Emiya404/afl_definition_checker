@@ -597,7 +597,24 @@ unsigned int *extract_response_codes_tls(unsigned char *buf,
   return state_sequence;
 }
 
-long long update_sutstate_packet(char *send_buf, int send_size, int protocol) {
+int socket_checker(int socket_fd){
+  int socket_type;
+  socklen_t length = sizeof(socket_type);
+  int sock_opt_ret = getsockopt(socket_fd, SOL_SOCKET, SO_TYPE, &socket_type, &length);
+  if(sock_opt_ret != -1){
+    //is socket
+    return 0x1;
+  }
+  return 0x0;
+}
+
+long long update_sutstate_packet(char *send_buf, int send_size, int protocol, int need_socket_check) {
+  if(need_socket_check){
+      int ret = socket_checker(need_socket_check);
+      if(!ret){
+        return 0x0;
+      }
+  }
   switch (protocol) {
   case FTP:
     extract_response_codes_ftp((unsigned char *)send_buf, send_size);

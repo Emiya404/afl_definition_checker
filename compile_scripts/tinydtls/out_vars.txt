@@ -1,0 +1,4 @@
+struct.dtls_peer_t,0,2
+struct.dtls_peer_t,0,3
+struct.keymap_t,0,1
+struct.keymap_t,0,3
