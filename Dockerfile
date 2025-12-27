@@ -48,10 +48,13 @@ RUN mkdir /home/ubuntu/experiments/tools/
 COPY --chown=ubuntu:ubuntu stateful_arena/tools /home/ubuntu/experiments/tools/
 RUN mkdir /home/ubuntu/experiments/fuzzers
 WORKDIR /home/ubuntu/experiments/fuzzers
-RUN git clone https://github.com/aflnet/aflnet.git aflnet && \
-  git clone https://github.com/stateafl/stateafl.git stateafl && \
-  git clone https://github.com/DonggeLiu/AFLNet_Legion.git aflnetlegion
-RUN mkdir /home/ubuntu/experiments/fuzzers/nsfuzz
+RUN git clone https://github.com/profuzzbench/aflnet.git && \
+    cd aflnet && \
+    make clean all && \
+    cd /home/ubuntu/experiments/fuzzers
+RUN git clone https://github.com/stateafl/stateafl.git stateafl && \
+    cd stateafl && \
+    make clean all
 COPY --chown=ubuntu:ubuntu stateful_arena/nsfuzz /home/ubuntu/experiments/fuzzers/nsfuzz
 
 # 7. create fuzz arena

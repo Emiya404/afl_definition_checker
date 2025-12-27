@@ -44,9 +44,8 @@ export ANALYZER_SYNCFILE_PATH=$2/../compile_scripts/lightftp/sync_point
 CC=afl-clang-fast make
 
 # 5.copy seeds, clean scripts, SUT arg files to $FUZZ_ARENA
-mkdir ${FUZZ_ARENA}/lightftp
 cp -r $2/../compile_scripts/lightftp/in-ftp-replay/ ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/clean.sh ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/fftp.conf ${FUZZ_ARENA}/lightftp
 cp ./fftp ${FUZZ_ARENA}/lightftp
-mkdir ${FUZZ_ARENA}/lightftp/ftpshare
+cp -r $2/../compile_scripts/lightftp/ftpshare/ ${FUZZ_ARENA}/lightftp/

@@ -16,7 +16,7 @@ cp ./fuzzer-definition-checker.so $3
 
 # 3.compile & instrument & link afl-definition-checker to STATEAFL
 cd $3
-make
+#make
 cd $3/llvm_mode
 cp $2/afl-clang-fast.c $3/llvm_mode
 export CFLAGS="-O3 -funroll-loops -Xclang -load -Xclang $3/fuzzer-definition-checker.so -DAFL_CLANG_STATEAFL -DAFL_CLANG_INSTRUMENT"
@@ -33,9 +33,8 @@ cd Source/Release
 CC=afl-clang-fast make -j1 clean all
 
 # 5.copy SUT, arg files, seeds
-mkdir ${FUZZ_ARENA}/lightftp
 cp ./fftp ${FUZZ_ARENA}/lightftp
 cp -r $2/../compile_scripts/lightftp/in-ftp-replay/ ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/clean.sh ${FUZZ_ARENA}/lightftp
 cp $2/../compile_scripts/lightftp/fftp.conf ${FUZZ_ARENA}/lightftp
-mkdir ${FUZZ_ARENA}/lightftp/ftpshare
+cp -r $2/../compile_scripts/lightftp/ftpshare/ ${FUZZ_ARENA}/lightftp/

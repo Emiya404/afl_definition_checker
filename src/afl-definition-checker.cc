@@ -136,6 +136,7 @@ static void register_definition_checker(const PassManagerBuilder &,
 }
 bool afl_definition_checker::runOnModule(Module &M) {
 
+  errs() << "[*]afl-definition-checker successfully loaded on SUT\n";
   LLVMContext &llvm_context = M.getContext();
   IntegerType *i8_type = IntegerType::getInt8Ty(llvm_context);
   IntegerType *i32_type = IntegerType::getInt32Ty(llvm_context);
@@ -205,7 +206,7 @@ bool afl_definition_checker::runOnModule(Module &M) {
   int bb_count = 0;
   bb_count_fd = get_bb_count_file();
   bb_count = read_bb_count_file(bb_count_fd);
-  errs() << "bbcount " << bb_count << "\n";
+  //errs() << "bbcount " << bb_count << "\n";
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
@@ -252,7 +253,7 @@ bool afl_definition_checker::runOnModule(Module &M) {
   for (Function &function : M) {
     if (function.isDeclaration() || function.getName().startswith("llvm") ||
         function.size() == 0) {
-      errs() << "[*] skip function:" << function.getName() << "\n";
+      //errs() << "[*] skip function:" << function.getName() << "\n";
       continue;
     }
 
