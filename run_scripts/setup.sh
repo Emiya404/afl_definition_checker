@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #1. check args
-if [ $# -eq 0 ]; then
+if [ $# -eq 3 ]; then
     echo "[!]err arguments"
     echo "useage: $0 <target> <fuzzer>"
     exit 1
@@ -34,12 +34,5 @@ PATCH_FILE="/home/ubuntu/experiments/stateful_pass/fuzzer_patch/${FUZZER}.patch"
 cd ${FUZZER_DIR}
 
 patch -Np1 <${PATCH_FILE}
-PATCH_STATUS=$?
-if [ ${PATCH_STATUS} -eq 0 ]; then
-    echo -e "\033[32m[*]patch ${FUZZER} success\033[0m"
-else
-    echo -e "\033[31m[!]patch ${FUZZER} fail\033[0m"
-    exit ${PATCH_STATUS}
-fi
 
 make > /dev/null

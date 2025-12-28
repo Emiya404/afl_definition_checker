@@ -21,7 +21,7 @@
  * 2. monitor workflow
  * When SUT wakes up, SUT will send packets to Monitor to notify monitor to
  * clear shm.
- * When state changes, SUT will send packets to Monotor to notify
+ * When state changes, SUT will send packets to Monitor to notify
  * monitor to update state bucket.
  * When SUT destructor runs, SUT will send
  * packets to monitor to notify monitor to save files.
