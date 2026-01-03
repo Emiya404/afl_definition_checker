@@ -1,4 +1,7 @@
+#include <arpa/inet.h>
+#include <bits/pthreadtypes.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +10,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include <arpa/inet.h>
 #define SOCK_PATH "/tmp/afl-definition-monitor"
 #define MAX_BUF 0x100
 enum protocol { FTP, RTSP, DTLS, SSH, TLS };
@@ -20,8 +22,46 @@ int unix_sock;
 int bucket_size;
 int bucket_index;
 
+/*
+ * NOTE:
+ * milestone: storage upgrade and rw lock for accurate data storage
+ *
+ */
+pthread_rwlock_t fstate_ptr_rwlock;
+pthread_rwlockattr_t fstate_ptr_rwlockattr;
+pthread_mutex_t fstate_shm_mutex;
+
+int ADC_locks_init() {
+  /*
+   * init mutex lock for access shm
+   */
+  if (pthread_mutex_init(&fstate_shm_mutex, NULL)) {
+    return -1;
+  }
+  /*
+   * init rw lock for priority
+   */
+  if (pthread_rwlockattr_init(&fstate_ptr_rwlockattr)) {
+    return -1;
+  }
+  if (pthread_rwlockattr_setkind_np(&fstate_ptr_rwlockattr,
+                                    PTHREAD_RWLOCK_PREFER_WRITER_NP)) {
+    return -1;
+  }
+  if (pthread_rwlock_init(&fstate_ptr_rwlock, &fstate_ptr_rwlockattr)) {
+    return -1;
+  }
+  return 0;
+}
+
 int create_new_bucket() {
+  /*
+   * any access to shm should wait for the ptr update
+   * so the thread only get write lock
+   */
+  pthread_rwlock_wrlock(&fstate_ptr_rwlock);
   __fstate_shm_ptr += (bucket_size + 4);
+  pthread_rwlock_unlock(&fstate_ptr_rwlock);
   return 0;
 }
 
@@ -122,7 +162,23 @@ long long update_sutstate_dump(int state_code) {
 
 long long store_sutinfo(int func_code) {
   if (__fstate_shm_ptr) {
-    *(__fstate_shm_ptr + 4 + func_code) = 1;
+    int byte_idx = (func_code >> 3);
+    int bit_idx = (func_code & 0x7);
+    /*
+     * access to shm
+     * any access to shm should wait for existing wrlock to release
+     * so first get rdlock.
+     * then, any thraed who get read lock should get mutex lock to
+     * finally write shm.
+     */
+    pthread_rwlock_rdlock(&fstate_ptr_rwlock);
+    pthread_mutex_lock(&fstate_shm_mutex);
+    unsigned char map_byte =
+        *(unsigned char *)(__fstate_shm_ptr + 4 + byte_idx);
+    map_byte = map_byte | (0x1 << bit_idx);
+    *(unsigned char *)(__fstate_shm_ptr + 4 + byte_idx) = map_byte;
+    pthread_mutex_unlock(&fstate_shm_mutex);
+    pthread_rwlock_unlock(&fstate_ptr_rwlock);
   }
   return 0;
 }
@@ -159,7 +215,9 @@ unsigned int *extract_response_codes_ftp(unsigned char *buf,
 
       state_count++;
       create_new_bucket();
-      //*(int *)__fstate_shm_ptr = message_code;
+      /*
+       * the ptr in fstate has update
+       */
       memset(tmp, 0x0, 0x20);
       memcpy(tmp, "sync\0", 0x5);
       *(int *)(&tmp[5]) = ++bucket_index;
@@ -223,7 +281,6 @@ unsigned int *extract_response_codes_rtsp(unsigned char *buf,
 
         state_count++;
         create_new_bucket();
-        *(int *)__fstate_shm_ptr = message_code;
         memset(tmp, 0x0, 0x20);
         memcpy(tmp, "sync\0", 0x5);
         *(int *)(&tmp[5]) = ++bucket_index;
@@ -401,7 +458,6 @@ unsigned int *extract_response_codes_dtls12(unsigned char *buf,
       status_code = (content_type << 8) + message_type;
       state_count++;
       create_new_bucket();
-      //*(int *)__fstate_shm_ptr = status_code;
       memset(tmp, 0x0, 0x20);
       memcpy(tmp, "sync\0", 0x5);
       *(int *)(&tmp[5]) = ++bucket_index;
@@ -460,7 +516,6 @@ unsigned int *extract_response_codes_ssh(unsigned char *buf,
         perror("Unable realloc a memory region to store state sequence");
       state_sequence[state_count - 1] = 256; // Identification
       create_new_bucket();
-      //*(int *)__fstate_shm_ptr = 256;
       memset(tmp_buf, 0x0, 0x20);
       memcpy(tmp_buf, "sync\0", 0x5);
       *(int *)(&tmp_buf[5]) = ++bucket_index;
@@ -497,7 +552,6 @@ unsigned int *extract_response_codes_ssh(unsigned char *buf,
       if (r <= 0 || strcmp(tmp_buf, "ok")) {
         exit(1);
       }
-      //*(int *)__fstate_shm_ptr = message_code;
       /* If this is a KEY exchange related message */
       if ((message_code >= 20) && (message_code <= 49)) {
         // Do nothing
@@ -567,7 +621,6 @@ unsigned int *extract_response_codes_tls(unsigned char *buf,
       unsigned int message_code = (content_type << 8) + message_type;
       state_count++;
       create_new_bucket();
-      //*(int *)__fstate_shm_ptr = message_code;
       memset(tmp, 0x0, 0x20);
       memcpy(tmp, "sync\0", 0x5);
       *(int *)(&tmp[5]) = ++bucket_index;
@@ -597,23 +650,25 @@ unsigned int *extract_response_codes_tls(unsigned char *buf,
   return state_sequence;
 }
 
-int socket_checker(int socket_fd){
+int socket_checker(int socket_fd) {
   int socket_type;
   socklen_t length = sizeof(socket_type);
-  int sock_opt_ret = getsockopt(socket_fd, SOL_SOCKET, SO_TYPE, &socket_type, &length);
-  if(sock_opt_ret != -1){
-    //is socket
+  int sock_opt_ret =
+      getsockopt(socket_fd, SOL_SOCKET, SO_TYPE, &socket_type, &length);
+  if (sock_opt_ret != -1) {
+    // is socket
     return 0x1;
   }
   return 0x0;
 }
 
-long long update_sutstate_packet(char *send_buf, int send_size, int protocol, int need_socket_check) {
-  if(need_socket_check){
-      int ret = socket_checker(need_socket_check);
-      if(!ret){
-        return 0x0;
-      }
+long long update_sutstate_packet(char *send_buf, int send_size, int protocol,
+                                 int need_socket_check) {
+  if (need_socket_check) {
+    int ret = socket_checker(need_socket_check);
+    if (!ret) {
+      return 0x0;
+    }
   }
   switch (protocol) {
   case FTP:
@@ -657,9 +712,12 @@ int connect_monitor() {
       perror("[!]read failed");
       exit(1);
     }
-    bucket_size = atoi(buf) + 1;
+    // bucket(bit map) size: round up to 8 and divided by 8
+    bucket_size = ((atoi(buf) + 0x7) & 0xfffffff8) >> 3;
   }
-
+  /*
+   * unix socket init
+   */
   unix_sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (unix_sock <= 0) {
     perror("[!]socket open failed");
@@ -678,6 +736,7 @@ int connect_monitor() {
   memset(buf, 0x0, MAX_BUF);
   memcpy(buf, "init", 0x4);
   msg_len = 5;
+
 #ifdef AFLNET_CLIENT
   *(int *)(&buf[msg_len]) = 0xdeadbeef;
   msg_len += 4;
@@ -721,6 +780,6 @@ int connect_monitor() {
       exit(1);
     }
   }
-
+  ADC_locks_init();
   return 0;
 }
