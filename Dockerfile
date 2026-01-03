@@ -32,9 +32,6 @@ WORKDIR /home/ubuntu/experiments
 RUN mkdir /home/ubuntu/experiments/targets 
 WORKDIR /home/ubuntu/experiments/targets 
 
-RUN git config --global http.https://github.com.proxy http://192.168.111.1:7890 && \
-git config --global https.https://github.com.proxy https://192.168.111.1:7890
-
 RUN git clone https://github.com/hfiref0x/LightFTP.git lightftp && \
   git clone https://github.com/assist-project/tinydtls-fuzz.git tinydtls && \
   git clone https://github.com/rgaufman/live555.git live555 && \
@@ -60,11 +57,6 @@ COPY --chown=ubuntu:ubuntu stateful_arena/nsfuzz /home/ubuntu/experiments/fuzzer
 # 7. create fuzz arena
 RUN mkdir /home/ubuntu/experiments/fuzz_arena
 ENV FUZZ_ARENA=/home/ubuntu/experiments/fuzz_arena
-
-# 8. create stateful pass stuff
-RUN mkdir /home/ubuntu/experiments/stateful_pass/
-COPY --chown=ubuntu:ubuntu compile_scripts /home/ubuntu/experiments/stateful_pass/compile_scripts
-COPY --chown=ubuntu:ubuntu src /home/ubuntu/experiments/stateful_pass/src
 
 # run the container
 CMD ["/home/ubuntu/start.sh"]
