@@ -254,7 +254,7 @@ static void edit_params(u32 argc, char **argv) {
     cc_params[cc_par_cnt++] = "-g";
     cc_params[cc_par_cnt++] = "-O3";
     cc_params[cc_par_cnt++] = "-funroll-loops";
-    cc_params[cc_par_cnt++] = "-fno-omit-frame-pointer"
+    cc_params[cc_par_cnt++] = "-fno-omit-frame-pointer";
   }
 
   if (getenv("AFL_NO_BUILTIN")) {
@@ -364,6 +364,7 @@ static void edit_params(u32 argc, char **argv) {
         alloc_printf("%s/afl-llvm-rt-state-tracer.o", obj_path);
   }
 #endif
+  cc_params[cc_par_cnt++] = "-pthread";
   cc_params[cc_par_cnt] = NULL;
 }
 
